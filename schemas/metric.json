@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title" : "Metric Definition Schema",
+  "description" : "This JSON schema applies to documents passed to Metric.from_yaml().",
+
+  "type": "object",
+  "patternProperties": {
+    "^\\w+$": {
+      "type": "object",
+      "required": [
+          "description",
+          "operator",
+          "specs"
+      ],
+      "properties": {
+        "reference": {
+          "type": "object",
+          "properties": {
+            "doc": {"type": "string"},
+            "page": {"type": "integer"},
+            "url": {"type": "string"}
+          }
+        },
+          "description": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [">=", ">", "==", "!=", "<", "<="]
+        },
+        "parameters": {
+          "type": "object",
+          "patternProperties": {
+            "^\\w+$": {
+              "type": "object",
+              "properties": {
+                "value": {"oneOf": [{"type": "number"},
+                                    {"type": "string"},
+                                    {"type": "boolean"}]},
+                "unit": {"type": "string"},
+                "label": {"type": "string"},
+                "description": {"type": "string"}
+              },
+              "required": ["value"]
+            }
+          }
+        },
+        "specs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["level", "value", "unit"],
+            "properties": {
+              "level": {"type": "string"},
+              "value": {"type": "number"},
+              "unit": {"type": "string"},
+              "filters": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "dependencies": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
