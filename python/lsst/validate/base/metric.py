@@ -1,9 +1,13 @@
 # See COPYRIGHT file at the top of the source tree.
 from __future__ import print_function, division
 
+import os
 import operator
 from collections import OrderedDict
+import json
+
 import yaml
+import jsonschema
 
 from .jsonmixin import JsonSerializationMixin
 from .datum import Datum
@@ -98,7 +102,7 @@ class Metric(JsonSerializationMixin):
 
     @classmethod
     def from_yaml(cls, metric_name, yaml_doc=None, yaml_path=None,
-                  resolve_dependencies=True):
+                  resolve_dependencies=True, validate=True):
         """Create a `Metric` instance from a YAML document that defines
         metrics.
 
@@ -121,17 +125,28 @@ class Metric(JsonSerializationMixin):
         resolve_dependencies : `bool`, optional
             API users should always set this to `True`. The opposite is used
             only used internally.
+        validate : `bool`, optional
+            Set to `False` to skip metric YAML schema validation. Default is
+            `True`.
 
         Raises
         ------
         RuntimeError
             Raised when neither ``yaml_doc`` or ``yaml_path`` are set.
+        jsonschema.exceptions.ValidationError
+            A jsonschema validation error.
         """
         if yaml_doc is None and yaml_path is not None:
             with open(yaml_path) as f:
                 yaml_doc = yaml.load(f)
         elif yaml_doc is None and yaml_path is None:
             raise RuntimeError('Set either yaml_doc or yaml_path argument')
+
+        # validate the metric document
+        if validate:
+            Metric.validate_metric_doc(yaml_doc)
+
+        # Extract sub-document for this specific metric
         metric_doc = yaml_doc[metric_name]
 
         metric_params = {}
@@ -184,6 +199,35 @@ class Metric(JsonSerializationMixin):
             m.specs.append(spec)
 
         return m
+
+    @staticmethod
+    def validate_metric_doc(doc):
+        """Validate that a metric document follows the schema.
+
+        Parameters
+        ----------
+        doc : dict
+            Metric YAML document, parsed into a `dict`.
+
+        Returns
+        -------
+        valid : bool
+            `True` for a well-formed metric document.
+
+        Raises
+        ------
+        jsonschema.exceptions.ValidationError
+            A jsonschema validation error.
+        """
+        schema_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__),
+                         '..', '..', '..', '..',
+                         'schemas', 'metric.json'))
+        with open(schema_path) as f:
+            schema = json.load(f)
+
+        jsonschema.validate(doc, schema)
+        return True
 
     @classmethod
     def from_json(cls, json_data):

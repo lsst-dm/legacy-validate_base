@@ -29,6 +29,10 @@ class MetricTestCase(unittest.TestCase):
             m = Metric.from_yaml(metric_name, yaml_doc=self.metric_doc)
             self.assertIsInstance(m, Metric)
 
+    def test_validate_metrics(self):
+        """Test metric validation."""
+        self.assertTrue(Metric.validate_metric_doc(self.metric_doc))
+
     def test_reference_string(self):
         """Verify reference property for different reference datasets."""
         m1 = Metric('test', 'test', '<=', reference_url='example.com',
