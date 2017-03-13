@@ -94,5 +94,40 @@ class SpecificationTestCase(unittest.TestCase):
             ThresholdSpecification.convert_operator_str('!=')(7, 5))
 
 
+class TestSimpleYamlDeserialization(unittest.TestCase):
+    """Test building a ThresholdSpecification from a YAML doc without
+    partials or inheritance.
+    """
+
+    def setUp(self):
+        # Python dict as a Specification YAML doc
+        # FIXME there's no provenance query yet
+        self.yaml_doc = {
+            'name': 'design_gri',
+            'metric': 'PA1',
+            'threshold': {
+                'value': 5.0,
+                'unit': 'mmag',
+                'operator': '<='
+            }
+        }
+        # Build the spec
+        self.s = ThresholdSpecification.from_yaml_doc(self.yaml_doc)
+
+    def test_threshold_operator(self):
+        self.assertEqual(self.yaml_doc['threshold']['operator'],
+                         self.s.operator_str)
+
+    def test_threshold_quantity(self):
+        self.assertEqual(self.yaml_doc['threshold']['value'],
+                         self.s.threshold.value)
+        self.assertEqual(self.yaml_doc['threshold']['unit'],
+                         self.s.threshold.unit.to_string())
+
+    def test_name(self):
+        self.assertEqual(self.yaml_doc['name'],
+                         self.s.name)
+
+
 if __name__ == "__main__":
     unittest.main()

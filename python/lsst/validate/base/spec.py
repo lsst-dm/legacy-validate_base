@@ -49,6 +49,32 @@ class ThresholdSpecification(JsonSerializationMixin):
         return Datum(self.threshold, label=self.name)
 
     @classmethod
+    def from_yaml_doc(cls, yaml_doc):
+        """Create a `Specification` from a YAML document, inheriting from
+        referenced specifications and partials in a `SpecificationSet`.
+
+        **TODO:** add ``spec_set`` as an attribute so that specifications
+        can be inherited.
+
+        Parameters
+        ----------
+        yaml_doc : `dict`
+            Parsed YAML document for a single specification.
+        spec_set : `SpecificationSet`
+            SpecificationSet that may be used to resolve inheritance in a
+            ``yaml_doc``.
+
+        Returns
+        -------
+        spec : `Specification`
+            A `Specification` instance.
+        """
+        q = Datum._rebuild_quantity(
+            yaml_doc['threshold']['value'],
+            yaml_doc['threshold']['unit'])
+        return cls(yaml_doc['name'], q, yaml_doc['threshold']['operator'])
+
+    @classmethod
     def from_json(cls, json_data):
         """Construct a `ThresholdSpecification` from a JSON document.
 
