@@ -9,7 +9,7 @@ import unittest
 import yaml
 import astropy.units as u
 
-from lsst.validate.base import Metric, Specification, Datum
+from lsst.validate.base import Metric, Datum
 
 
 class MetricTestCase(unittest.TestCase):
@@ -60,58 +60,6 @@ class MetricTestCase(unittest.TestCase):
         self.assertTrue(Metric.convert_operator_str('==')(7, 7))
         self.assertTrue(Metric.convert_operator_str('!=')(7, 5))
 
-    def test_am1_get_spec_names(self):
-        """Test get_spec_names against AM1."""
-        am1 = Metric.from_yaml('AM1', yaml_doc=self.metric_doc)
-        spec_names_all = am1.get_spec_names()
-        self.assertTrue(len(spec_names_all) == 3)
-        self.assertIn('design', spec_names_all)
-        self.assertIn('minimum', spec_names_all)
-        self.assertIn('stretch', spec_names_all)
-
-        # No specs for bands other than r and i!
-        spec_names_g = am1.get_spec_names(filter_name='g')
-        self.assertTrue(len(spec_names_g) == 0)
-
-    def testGetSpec(self):
-        """Test Metric.getSpec() search strategy."""
-        a = Specification('a', 0., 'mag')
-        b_r = Specification('b', 0., 'mag', filter_names=['r'])
-        b_ug = Specification('b', 0., 'mag', filter_names=['u', 'g'])
-
-        m = Metric('test', 'test', '==', specs=[a, b_r, b_ug])
-
-        self.assertEqual(m.get_spec('a'), a)
-        self.assertEqual(m.get_spec('a', filter_name='r'), a)
-        self.assertEqual(m.get_spec('b', filter_name='r'), b_r)
-        self.assertEqual(m.get_spec('b', filter_name='u'), b_ug)
-
-        with self.assertRaises(RuntimeError):
-            self.assertEqual(m.get_spec('c'))
-
-        with self.assertRaises(RuntimeError):
-            self.assertEqual(m.get_spec('b', filter_name='z'))
-
-    def test_get_spec_dependency(self):
-        af1 = Metric.from_yaml('AF1', yaml_doc=self.metric_doc)
-        dep = af1.get_spec_dependency('design', 'AD1', filter_name='r')
-
-        ad1 = Metric.from_yaml('AD1', yaml_doc=self.metric_doc)
-
-        self.assertEqual(dep.quantity,
-                         ad1.get_spec('design', filter_name='r').quantity)
-
-    def test_check_spec(self):
-        """Test Metric.check_spec()."""
-        a = Specification('a', 0., 'mag')
-        b_r = Specification('b', 2., 'mag', filter_names=['r'])
-        b_ug = Specification('b', 4., 'mag', filter_names=['u', 'g'])
-        m = Metric('test', 'test', '<', specs=[a, b_r, b_ug])
-
-        self.assertFalse(m.check_spec(3. * u.mag, 'b', filter_name='r'))
-        self.assertTrue(m.check_spec(3. * u.mag, 'b', filter_name='g'))
-        self.assertTrue(m.check_spec(10. * u.mmag, 'b', filter_name='g'))
-
     def test_json(self):
         """Simple test of the serialized JSON content of a metric."""
         name = 'T1'
@@ -136,20 +84,6 @@ class MetricTestCase(unittest.TestCase):
         self.assertEqual(j['reference']['url'], reference_url)
         self.assertEqual(j['parameters']['p']['value'], 5.)
         self.assertEqual(j['parameters']['p']['unit'], 'mag')
-        self.assertIsInstance(j['specifications'], list)
-
-        # rebuild from json
-        m2 = Metric.from_json(j)
-        self.assertEqual(m.name, m2.name)
-        self.assertEqual(m.description, m2.description)
-        self.assertEqual(m.description, m2.description)
-        self.assertEqual(m.reference_doc, m2.reference_doc)
-        self.assertEqual(m.reference_page, m2.reference_page)
-        self.assertEqual(m.reference_url, m2.reference_url)
-        for name, param in m.parameters.items():
-            self.assertEqual(param.quantity, m2.parameters[name].quantity)
-        for spec1, spec2 in zip(m.specs, m2.specs):
-            self.assertEqual(spec1.quantity, spec2.quantity)
 
 
 if __name__ == "__main__":

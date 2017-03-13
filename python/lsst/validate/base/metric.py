@@ -8,7 +8,6 @@ import yaml
 
 from .jsonmixin import JsonSerializationMixin
 from .datum import Datum
-from .spec import Specification
 
 
 __all__ = ['Metric', 'load_metrics']
@@ -153,37 +152,6 @@ class Metric(JsonSerializationMixin):
             reference_page=metric_doc['reference'].get('page', None),
             parameters=metric_params)
 
-        for spec_doc in metric_doc['specs']:
-            deps = None
-            if 'dependencies' in spec_doc and resolve_dependencies:
-                deps = {}
-                for dep_item in spec_doc['dependencies']:
-                    if isinstance(dep_item, basestring):
-                        # This is a metric
-                        name = dep_item
-                        d = Metric.from_yaml(name, yaml_doc=yaml_doc,
-                                             resolve_dependencies=False)
-                    elif isinstance(dep_item, dict):
-                        # Likely a Datum
-                        # in yaml, wrapper object is dict with single key-val
-                        name = list(dep_item.keys())[0]
-                        dep_item = dict(dep_item[name])
-                        v = dep_item['value']
-                        unit = dep_item['unit']
-                        d = Datum(v, unit,
-                                  label=dep_item.get('label', None),
-                                  description=dep_item.get('description', None))
-                    else:
-                        raise RuntimeError(
-                            'Cannot process dependency %r' % dep_item)
-                    deps[name] = d
-            spec = Specification(name=spec_doc['level'],
-                                 quantity=spec_doc['value'],
-                                 unit=spec_doc['unit'],
-                                 filter_names=spec_doc.get('filter_names', None),
-                                 dependencies=deps)
-            m.specs.append(spec)
-
         return m
 
     @classmethod
@@ -200,14 +168,11 @@ class Metric(JsonSerializationMixin):
         metric : `Metric`
             Metric from JSON.
         """
-        specs = [Specification.from_json(v)
-                 for v in json_data['specifications']]
         params = {k: Datum.from_json(v)
                   for k, v in json_data['parameters'].items()}
         m = cls(json_data['name'],
                 json_data['description'],
                 json_data['operator_str'],
-                specs=specs,
                 parameters=params,
                 reference_doc=json_data['reference']['doc'],
                 reference_page=json_data['reference']['page'],
