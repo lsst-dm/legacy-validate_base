@@ -7,7 +7,50 @@ from .jsonmixin import JsonSerializationMixin
 from .datum import Datum
 
 
-__all__ = ['ThresholdSpecification']
+__all__ = ['SpecificationSet', 'ThresholdSpecification']
+
+
+class SpecificationSet(object):
+    """A collection of Specification objects corresponding to metrics
+    in a MetricSet for a package, typically.
+
+    Parameters
+    ----------
+    name : `str`
+        Name of the `MetricSet` this ``SpecificationSet`` corresponds to.
+        Typically this is the name of a package.
+    specifications : `dict`
+        A dictionary of key-value pairs named after specifications, and
+        values are ``Specification`` instances.
+    """
+
+    def __init__(self, name, specifications):
+        self._name = name
+        self._specifications = specifications
+
+    @property
+    def name(self):
+        """Name of the `MetricSet` this ``SpecificationSet`` corresponds to
+        (immutable, `str`).
+
+        Typically this is the name of a package.
+        """
+
+    def __getitem__(self, name):
+        return self._specifications[name]
+
+    def __setitem__(self, name, specification):
+        # FIXME create a Specification base class for type testing
+        if not isinstance(specification, ThresholdSpecification):
+            msg = '{0!r} is not a Specification type'.format(specification)
+            raise RuntimeError(msg)
+        self._specifications[name] = specification
+
+    def __len__(self):
+        return len(self._specifications)
+
+    def __contains__(self, name):
+        return name in self._specifications
 
 
 class ThresholdSpecification(JsonSerializationMixin):
