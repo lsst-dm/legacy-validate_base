@@ -1,63 +1,73 @@
 # See COPYRIGHT file at the top of the source tree.
 from __future__ import print_function, division
 
-import astropy.units as u
+import operator
 
 from .jsonmixin import JsonSerializationMixin
-from .datum import Datum, QuantityAttributeMixin
+from .datum import Datum
 
 
-__all__ = ['Specification']
+__all__ = ['ThresholdSpecification']
 
 
-class Specification(QuantityAttributeMixin, JsonSerializationMixin):
-    """A specification level, or threshold, associated with a `Metric`.
+class ThresholdSpecification(JsonSerializationMixin):
+    """A threshold-type specification, associated with a `Metric`, that
+    defines a binary comparison against a measurement.
 
     Parameters
     ----------
     name : `str`
-        Name of the specification level for a metric. LPM-17, for example,
+        Name of the specification for a metric. LPM-17, for example,
         uses ``'design'``, ``'minimum'`` and ``'stretch'`` terminology.
     quantity : `astropy.units.Quantity`
         The specification threshold level.
     """
 
     name = None
-    """Name of the specification level for a metric.
+    """Name of the specification for a metric.
 
     LPM-17, for example, uses ``'design'``, ``'minimum'`` and ``'stretch'``
     terminology.
     """
 
-    quantity = None
+    threshold = None
     """The specification threshold level (`astropy.units.Quantity`)."""
 
-    def __init__(self, name, quantity):
+    def __init__(self, name, threshold, operator_str):
         self.name = name
-        self.quantity = quantity
+        self.threshold = threshold
+        self.operator_str = operator_str
+
+    @property
+    def type(self):
+        return 'threshold'
 
     @property
     def datum(self):
-        """Representation of this `Specification` as a `Datum`."""
-        return Datum(self.quantity, label=self.name)
+        """Representation of this `Specification`\ 's threshold as a `Datum`.
+        """
+        return Datum(self.threshold, label=self.name)
 
     @classmethod
     def from_json(cls, json_data):
-        """Construct a Specification from a JSON document.
+        """Construct a `ThresholdSpecification` from a JSON document.
 
         Parameters
         ----------
         json_data : `dict`
-            Specification JSON object.
+            ThresholdSpecification JSON object.
 
         Returns
         -------
         specification : `Specification`
             Specification from JSON.
         """
-        q = Datum._rebuild_quantity(json_data['value'], json_data['unit'])
+        q = Datum._rebuild_quantity(
+            json_data['threshold']['value'],
+            json_data['threshold']['unit'])
         s = cls(name=json_data['name'],
-                quantity=q)
+                threshold=q,
+                operator_str=json_data['threshold']['operator'])
         return s
 
     @property
@@ -65,11 +75,97 @@ class Specification(QuantityAttributeMixin, JsonSerializationMixin):
         """`dict` that can be serialized as semantic JSON, compatible with
         the SQUASH metric service.
         """
-        if isinstance(self.quantity, u.Quantity):
-            v = self.quantity.value
-        else:
-            v = self.quantity
         return JsonSerializationMixin.jsonify_dict({
             'name': self.name,
-            'value': v,
-            'unit': self.unit_str})
+            'type': self.type,
+            'threshold': {
+                'value': self.threshold.value,
+                'unit': self.threshold.unit.to_string(),
+                'operator': self.operator_str
+            }})
+
+    @property
+    def operator_str(self):
+        """Threshold comparision operator ('str').
+
+        A measurement *passes* the specification if::
+
+           measurement {{ operator }} threshold == True
+
+        The operator string is a standard Python binary comparison token, such
+        as: ``'<'``, ``'>'``, ``'<='``, ``'>='``, ``'=='`` or ``'!='``.
+        """
+        return self._operator_str
+
+    @operator_str.setter
+    def operator_str(self, v):
+        # Cache the operator function as a means of validating the input too
+        self._operator = ThresholdSpecification.convert_operator_str(v)
+        self._operator_str = v
+
+    @property
+    def operator(self):
+        """Binary comparision operator that tests success of a measurement
+        fulfilling a specification of this metric.
+
+        Measured value is on left side of comparison and specification level
+        is on right side.
+        """
+        return self._operator
+
+    @staticmethod
+    def convert_operator_str(op_str):
+        """Convert a string representing a binary comparison operator to
+        the operator function itself.
+
+        Operators are oriented so that the measurement is on the left-hand
+        side, and specification threshold on the right hand side.
+
+        The following operators are permitted:
+
+        ========== =============
+        ``op_str`` Function
+        ========== =============
+        ``>=``     `operator.ge`
+        ``>``      `operator.gt`
+        ``<``      `operator.lt`
+        ``<=``     `operator.le`
+        ``==``     `operator.eq`
+        ``!=``     `operator.ne`
+        ========== =============
+
+        Parameters
+        ----------
+        op_str : `str`
+            A string representing a binary operator.
+
+        Returns
+        -------
+        op_func : obj
+            An operator function from the `operator` standard library
+            module.
+        """
+        operators = {'>=': operator.ge,
+                     '>': operator.gt,
+                     '<': operator.lt,
+                     '<=': operator.le,
+                     '==': operator.eq,
+                     '!=': operator.ne}
+        return operators[op_str]
+
+    def check(self, measurement):
+        """Check if a measurement passes this specification.
+
+        Parameters
+        ----------
+        measurement : `astropy.units.Quantity`
+            The measurement value. The measurement `~astropy.units.Quantity`
+            must have units *compatible* with `threshold`.
+
+        Returns
+        -------
+        passed : `bool`
+            `True` if the measurement meets the specification,
+            `False` otherwise.
+        """
+        return self.operator(measurement, self.threshold)
