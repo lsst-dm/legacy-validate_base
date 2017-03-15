@@ -2,11 +2,12 @@
 # See COPYRIGHT file at the top of the source tree.
 from __future__ import print_function, division
 
+import operator
 import unittest
 
 import astropy.units as u
 
-from lsst.validate.base import Specification, Datum
+from lsst.validate.base import ThresholdSpecification
 
 
 class SpecificationTestCase(unittest.TestCase):
@@ -20,47 +21,29 @@ class SpecificationTestCase(unittest.TestCase):
 
     def test_quantity(self):
         """Test creating and accessing a specification from a quantity."""
-        s = Specification('design', 5 * u.mag)
-        self.assertEqual(s.quantity.value, 5.)
-        self.assertEqual(s.unit, u.mag)
-        self.assertEqual(s.unit_str, 'mag')
+        s = ThresholdSpecification('design', 5 * u.mag, '<')
+        self.assertEqual(s.threshold.value, 5.)
+        self.assertEqual(s.threshold.unit, u.mag)
+        self.assertEqual(s.threshold.unit.to_string(), 'mag')
+        self.assertEqual(s.operator_str, '<')
+        self.assertEqual(s.operator, operator.lt)
+        # Test the check method and unit equivalencies
+        self.assertTrue(s.check(2. * u.mag))
+        self.assertTrue(s.check(2000. * u.mmag))
+        self.assertFalse(s.check(7. * u.mag))
+        self.assertFalse(s.check(7000. * u.mmag))
 
         # test json output
         json_data = s.json
         self.assertEqual(json_data['name'], 'design')
-        self.assertEqual(json_data['value'], 5.)
-        self.assertEqual(json_data['unit'], 'mag')
+        self.assertEqual(json_data['threshold']['value'], 5.)
+        self.assertEqual(json_data['threshold']['unit'], 'mag')
+        self.assertEqual(json_data['threshold']['operator'], '<')
 
         # rebuild from json
-        s2 = Specification.from_json(json_data)
+        s2 = ThresholdSpecification.from_json(json_data)
         self.assertEqual(s.name, s2.name)
-        self.assertEqual(s.quantity, s2.quantity)
-        self.assertEqual(s.filter_names, s2.filter_names)
-
-        # test datum output
-        d = s.datum
-        self.assertEqual(d.quantity, 5. * u.mag)
-        self.assertEqual(d.label, 'design')
-
-    def test_from_value(self):
-        """Test creating a specification from a value."""
-        s = Specification('design', 5., unit='mag')
-        self.assertEqual(s.quantity.value, 5.)
-        self.assertEqual(s.unit, u.mag)
-        self.assertEqual(s.unit_str, 'mag')
-        self.assertEqual(s.name, 'design')
-
-        # test json output
-        json_data = s.json
-        self.assertEqual(json_data['name'], 'design')
-        self.assertEqual(json_data['value'], 5.)
-        self.assertEqual(json_data['unit'], 'mag')
-
-        # rebuild from json
-        s2 = Specification.from_json(json_data)
-        self.assertEqual(s.name, s2.name)
-        self.assertEqual(s.quantity, s2.quantity)
-        self.assertEqual(s.filter_names, s2.filter_names)
+        self.assertEqual(s.threshold, s2.threshold)
 
         # test datum output
         d = s.datum
@@ -69,56 +52,81 @@ class SpecificationTestCase(unittest.TestCase):
 
     def test_unitless(self):
         """Test unitless specifications."""
-        s = Specification('design', 100., unit='')
-        self.assertEqual(s.quantity.value, 100.)
-        self.assertEqual(s.unit, u.Unit(''))
-        self.assertEqual(s.unit_str, '')
+        s = ThresholdSpecification('design',
+                                   100. * u.dimensionless_unscaled, '<')
+        self.assertEqual(s.threshold.value, 100.)
+        self.assertEqual(s.threshold.unit, u.dimensionless_unscaled)
+        self.assertEqual(s.threshold.unit.to_string(), '')
+        # Test the check method
+        self.assertTrue(s.check(99. * u.dimensionless_unscaled))
+        self.assertFalse(s.check(101. * u.dimensionless_unscaled))
 
         # test json output
         json_data = s.json
         self.assertEqual(json_data['name'], 'design')
-        self.assertEqual(json_data['value'], 100.)
-        self.assertEqual(json_data['unit'], '')
+        self.assertEqual(json_data['threshold']['value'], 100.)
+        self.assertEqual(json_data['threshold']['unit'], '')
+        self.assertEqual(json_data['threshold']['operator'], '<')
 
         # rebuild from json
-        s2 = Specification.from_json(json_data)
+        s2 = ThresholdSpecification.from_json(json_data)
         self.assertEqual(s.name, s2.name)
-        self.assertEqual(s.quantity, s2.quantity)
-        self.assertEqual(s.filter_names, s2.filter_names)
+        self.assertEqual(s.threshold, s2.threshold)
 
         # test datum output
         d = s.datum
-        self.assertEqual(d.quantity, 100. * u.Unit(''))
+        self.assertEqual(d.quantity, 100. * u.dimensionless_unscaled)
         self.assertEqual(d.label, 'design')
 
-    def test_unitless_int(self):
-        """Test that a specification can be a unitless integer (count)."""
-        s = Specification('design', 10)
-        self.assertEqual(s.quantity, 10)
+    def test_operator_conversion(self):
+        """Tests for Metric.convert_operator_str."""
+        self.assertTrue(
+            ThresholdSpecification.convert_operator_str('>=')(7, 7))
+        self.assertTrue(
+            ThresholdSpecification.convert_operator_str('>')(7, 5))
+        self.assertTrue(
+            ThresholdSpecification.convert_operator_str('<')(5, 7))
+        self.assertTrue(
+            ThresholdSpecification.convert_operator_str('<=')(7, 7))
+        self.assertTrue(
+            ThresholdSpecification.convert_operator_str('==')(7, 7))
+        self.assertTrue(
+            ThresholdSpecification.convert_operator_str('!=')(7, 5))
 
-        # test JSON output
-        json_data = s.json
-        self.assertEqual(json_data['value'], 10)
 
-        # rebuild from JSON
-        s2 = Specification.from_json(json_data)
-        self.assertEqual(s.quantity, s2.quantity)
+class TestSimpleYamlDeserialization(unittest.TestCase):
+    """Test building a ThresholdSpecification from a YAML doc without
+    partials or inheritance.
+    """
 
-    def test_filters(self):
-        """Test setting filter dependencies."""
-        filter_names = ['u', 'g']
-        s = Specification('design', 5 * u.mag, filter_names=filter_names)
-        for filter_name in s.filter_names:
-            self.assertIn(filter_name, filter_names)
-        self.assertEqual(len(filter_names), len(s.filter_names))
+    def setUp(self):
+        # Python dict as a Specification YAML doc
+        # FIXME there's no provenance query yet
+        self.yaml_doc = {
+            'name': 'design_gri',
+            'metric': 'PA1',
+            'threshold': {
+                'value': 5.0,
+                'unit': 'mmag',
+                'operator': '<='
+            }
+        }
+        # Build the spec
+        self.s = ThresholdSpecification.from_yaml_doc(self.yaml_doc)
 
-    def test_dependency_access(self):
-        deps = {'a': Datum(5., 'mag')}
-        s = Specification('design', 0., '', dependencies=deps)
-        self.assertEqual(s.a.quantity, 5. * u.mag)
-        json_data = s.json
-        self.assertEqual(json_data['dependencies']['a']['value'], 5.)
-        self.assertEqual(json_data['dependencies']['a']['unit'], 'mag')
+    def test_threshold_operator(self):
+        self.assertEqual(self.yaml_doc['threshold']['operator'],
+                         self.s.operator_str)
+
+    def test_threshold_quantity(self):
+        self.assertEqual(self.yaml_doc['threshold']['value'],
+                         self.s.threshold.value)
+        self.assertEqual(self.yaml_doc['threshold']['unit'],
+                         self.s.threshold.unit.to_string())
+
+    def test_name(self):
+        self.assertEqual(self.yaml_doc['name'],
+                         self.s.name)
 
 
 if __name__ == "__main__":

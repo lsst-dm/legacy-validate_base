@@ -1,111 +1,142 @@
 # See COPYRIGHT file at the top of the source tree.
 from __future__ import print_function, division
 
-import astropy.units as u
+import operator
 
 from .jsonmixin import JsonSerializationMixin
-from .datum import Datum, QuantityAttributeMixin
+from .datum import Datum
 
 
-__all__ = ['Specification']
+__all__ = ['SpecificationSet', 'ThresholdSpecification']
 
 
-class Specification(QuantityAttributeMixin, JsonSerializationMixin):
-    """A specification level, or threshold, associated with a `Metric`.
+class SpecificationSet(object):
+    """A collection of Specification objects corresponding to metrics
+    in a MetricSet for a package, typically.
 
     Parameters
     ----------
     name : `str`
-        Name of the specification level for a metric. LPM-17, for example,
+        Name of the `MetricSet` this ``SpecificationSet`` corresponds to.
+        Typically this is the name of a package.
+    specifications : `dict`
+        A dictionary of key-value pairs named after specifications, and
+        values are ``Specification`` instances.
+    """
+
+    def __init__(self, name, specifications):
+        self._name = name
+        self._specifications = specifications
+
+    @property
+    def name(self):
+        """Name of the `MetricSet` this ``SpecificationSet`` corresponds to
+        (immutable, `str`).
+
+        Typically this is the name of a package.
+        """
+
+    def __getitem__(self, name):
+        return self._specifications[name]
+
+    def __setitem__(self, name, specification):
+        # FIXME create a Specification base class for type testing
+        if not isinstance(specification, ThresholdSpecification):
+            msg = '{0!r} is not a Specification type'.format(specification)
+            raise RuntimeError(msg)
+        self._specifications[name] = specification
+
+    def __len__(self):
+        return len(self._specifications)
+
+    def __contains__(self, name):
+        return name in self._specifications
+
+
+class ThresholdSpecification(JsonSerializationMixin):
+    """A threshold-type specification, associated with a `Metric`, that
+    defines a binary comparison against a measurement.
+
+    Parameters
+    ----------
+    name : `str`
+        Name of the specification for a metric. LPM-17, for example,
         uses ``'design'``, ``'minimum'`` and ``'stretch'`` terminology.
-    quantity : `astropy.units.Quantity`, `float`, or `int`
+    quantity : `astropy.units.Quantity`
         The specification threshold level.
-    unit : `str`, optional
-        `astropy.units.Unit`-compatible `str` describing the units of
-        ``value`` (only necessary if `quantity` is a `float`).
-        An empty string (``''``) describes a unitless quantity.
-    filter_names : `list`, optional
-        A list of optical filter names that this specification applies to.
-        Set only if the specification level is dependent on the filter.
-    dependencies : `dict`, optional
-        A dictionary of named `Datum` values that must be known when making a
-        measurement against a specification level. Dependencies can be
-        accessed as attributes of the specification object. The names of
-        class attributes match keys in `dependencies`.
     """
 
     name = None
-    """Name of the specification level for a metric.
+    """Name of the specification for a metric.
 
     LPM-17, for example, uses ``'design'``, ``'minimum'`` and ``'stretch'``
     terminology.
     """
 
-    quantity = None
+    threshold = None
     """The specification threshold level (`astropy.units.Quantity`)."""
 
-    filter_names = None
-    """`list` of names of optical filters that this Specification level
-    applies to.
-
-    Default is `None` if the `Specification` is filter-independent.
-    """
-
-    dependencies = None
-    """`dict` of named `Datum` values that must be known when making a
-    measurement against a specification level.
-
-    Dependencies can also be accessed as attributes of the `Specification`
-    object. The names of class attributes match keys in `dependencies`.
-    """
-
-    def __init__(self, name, quantity, unit=None, filter_names=None,
-                 dependencies=None):
+    def __init__(self, name, threshold, operator_str):
         self.name = name
-        if unit is not None:
-            self.quantity = quantity * u.Unit(unit)
-        else:
-            self.quantity = quantity
-        self.filter_names = filter_names
-        if dependencies:
-            self.dependencies = dependencies
-        else:
-            self.dependencies = {}
+        self.threshold = threshold
+        self.operator_str = operator_str
 
-    def __getattr__(self, key):
-        """Access dependencies with keys as attributes."""
-        if key in self.dependencies:
-            return self.dependencies[key]
-        else:
-            raise AttributeError("%r object has no attribute %r" %
-                                 (self.__class__, key))
+    @property
+    def type(self):
+        return 'threshold'
 
     @property
     def datum(self):
-        """Representation of this `Specification` as a `Datum`."""
-        return Datum(self.quantity, label=self.name)
+        """Representation of this `Specification`\ 's threshold as a `Datum`.
+        """
+        return Datum(self.threshold, label=self.name)
+
+    @classmethod
+    def from_yaml_doc(cls, yaml_doc):
+        """Create a `Specification` from a YAML document, inheriting from
+        referenced specifications and partials in a `SpecificationSet`.
+
+        **TODO:** add ``spec_set`` as an attribute so that specifications
+        can be inherited.
+
+        Parameters
+        ----------
+        yaml_doc : `dict`
+            Parsed YAML document for a single specification.
+        spec_set : `SpecificationSet`
+            SpecificationSet that may be used to resolve inheritance in a
+            ``yaml_doc``.
+
+        Returns
+        -------
+        spec : `Specification`
+            A `Specification` instance.
+        """
+        q = Datum._rebuild_quantity(
+            yaml_doc['threshold']['value'],
+            yaml_doc['threshold']['unit'])
+        return cls(yaml_doc['name'], q, yaml_doc['threshold']['operator'])
 
     @classmethod
     def from_json(cls, json_data):
-        """Construct a Specification from a JSON document.
+        """Construct a `ThresholdSpecification` from a JSON document.
 
         Parameters
         ----------
         json_data : `dict`
-            Specification JSON object.
+            ThresholdSpecification JSON object.
 
         Returns
         -------
         specification : `Specification`
             Specification from JSON.
         """
-        q = Datum._rebuild_quantity(json_data['value'], json_data['unit'])
-        deps = {k: Datum.from_json(v)
-                for k, v in json_data['dependencies'].items()}
+        q = Datum._rebuild_quantity(
+            json_data['threshold']['value'],
+            json_data['threshold']['unit'])
         s = cls(name=json_data['name'],
-                quantity=q,
-                filter_names=json_data['filter_names'],
-                dependencies=deps)
+                threshold=q,
+                operator_str=json_data['threshold']['operator'])
         return s
 
     @property
@@ -113,13 +144,97 @@ class Specification(QuantityAttributeMixin, JsonSerializationMixin):
         """`dict` that can be serialized as semantic JSON, compatible with
         the SQUASH metric service.
         """
-        if isinstance(self.quantity, u.Quantity):
-            v = self.quantity.value
-        else:
-            v = self.quantity
         return JsonSerializationMixin.jsonify_dict({
             'name': self.name,
-            'value': v,
-            'unit': self.unit_str,
-            'filter_names': self.filter_names,
-            'dependencies': self.dependencies})
+            'type': self.type,
+            'threshold': {
+                'value': self.threshold.value,
+                'unit': self.threshold.unit.to_string(),
+                'operator': self.operator_str
+            }})
+
+    @property
+    def operator_str(self):
+        """Threshold comparision operator ('str').
+
+        A measurement *passes* the specification if::
+
+           measurement {{ operator }} threshold == True
+
+        The operator string is a standard Python binary comparison token, such
+        as: ``'<'``, ``'>'``, ``'<='``, ``'>='``, ``'=='`` or ``'!='``.
+        """
+        return self._operator_str
+
+    @operator_str.setter
+    def operator_str(self, v):
+        # Cache the operator function as a means of validating the input too
+        self._operator = ThresholdSpecification.convert_operator_str(v)
+        self._operator_str = v
+
+    @property
+    def operator(self):
+        """Binary comparision operator that tests success of a measurement
+        fulfilling a specification of this metric.
+
+        Measured value is on left side of comparison and specification level
+        is on right side.
+        """
+        return self._operator
+
+    @staticmethod
+    def convert_operator_str(op_str):
+        """Convert a string representing a binary comparison operator to
+        the operator function itself.
+
+        Operators are oriented so that the measurement is on the left-hand
+        side, and specification threshold on the right hand side.
+
+        The following operators are permitted:
+
+        ========== =============
+        ``op_str`` Function
+        ========== =============
+        ``>=``     `operator.ge`
+        ``>``      `operator.gt`
+        ``<``      `operator.lt`
+        ``<=``     `operator.le`
+        ``==``     `operator.eq`
+        ``!=``     `operator.ne`
+        ========== =============
+
+        Parameters
+        ----------
+        op_str : `str`
+            A string representing a binary operator.
+
+        Returns
+        -------
+        op_func : obj
+            An operator function from the `operator` standard library
+            module.
+        """
+        operators = {'>=': operator.ge,
+                     '>': operator.gt,
+                     '<': operator.lt,
+                     '<=': operator.le,
+                     '==': operator.eq,
+                     '!=': operator.ne}
+        return operators[op_str]
+
+    def check(self, measurement):
+        """Check if a measurement passes this specification.
+
+        Parameters
+        ----------
+        measurement : `astropy.units.Quantity`
+            The measurement value. The measurement `~astropy.units.Quantity`
+            must have units *compatible* with `threshold`.
+
+        Returns
+        -------
+        passed : `bool`
+            `True` if the measurement meets the specification,
+            `False` otherwise.
+        """
+        return self.operator(measurement, self.threshold)
