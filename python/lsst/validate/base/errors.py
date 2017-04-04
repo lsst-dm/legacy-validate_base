@@ -13,3 +13,7 @@ class ValidateError(Exception):
 class ValidateSpecificationError(ValidateError):
     """Error accessing or using requirement specifications."""
     pass
+
+
+class SpecificationResolutionError(ValidateError):
+    """Error resolving a serialized specification's bases."""
