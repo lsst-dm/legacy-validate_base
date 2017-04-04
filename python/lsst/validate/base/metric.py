@@ -139,9 +139,6 @@ class Metric(JsonSerializationMixin):
         Page where metric in defined in the reference document.
     """
 
-    name = None
-    """Name of the metric (`str`)."""
-
     description = None
     """Short description of the metric (`str`)."""
 
@@ -262,6 +259,15 @@ class Metric(JsonSerializationMixin):
         return '{0.name} ({0.unit_str}): "{0.description}"'.format(self)
 
     @property
+    def name(self):
+        """Metric's name (`Name`)."""
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = Name(metric=value)
+
+    @property
     def unit_str(self):
         """The string representation of the `Unit` of this metric."""
         if self.unit == '':
@@ -301,7 +307,7 @@ class Metric(JsonSerializationMixin):
             'page': self.reference_page,
             'url': self.reference_url}
         return JsonSerializationMixin.jsonify_dict({
-            'name': self.name,
+            'name': str(self.name),
             'description': self.description,
             'unit': self.unit,
             'reference': ref_doc})
