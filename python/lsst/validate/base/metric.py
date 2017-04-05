@@ -247,6 +247,8 @@ class Metric(JsonSerializationMixin):
 
     def __eq__(self, other):
         return ((self.name == other.name) and
+                (self.unit == self.unit) and
+                (self.description == self.description) and
                 (self.reference == other.reference))
 
     def __str__(self):
