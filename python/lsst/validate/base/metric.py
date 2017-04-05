@@ -9,6 +9,7 @@ import yaml
 import astropy.units as u
 
 from .jsonmixin import JsonSerializationMixin
+from .naming import Name
 from .yamlutils import load_ordered_yaml
 
 __all__ = ['Metric', 'MetricSet', 'MetricRepo', 'load_metrics']
