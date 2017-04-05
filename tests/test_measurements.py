@@ -5,18 +5,19 @@ import unittest
 
 import astropy.units as u
 
-from lsst.validate.base import Measurement, MeasurementSet, Metric, MetricSet
+from lsst.validate.base import (Measurement, MeasurementSet, Metric, MetricSet,
+                                Name)
 
 
 class MeasurementSetTestCase(unittest.TestCase):
+
     def setUp(self):
         package = 'test'
         self.package = package
         metric1 = Metric("{}.radius".format(package), "some radius", u.arcsec)
         metric2 = Metric("{}.cmodel_mag".format(package), "a magnitude", u.mag)
         metric3 = Metric("{}.unitless".format(package), "no units!", '')
-        self.metric_set = MetricSet(package,
-                                    metric_list=[metric1, metric2, metric3])
+        self.metric_set = MetricSet([metric1, metric2, metric3])
 
         self.good = {
             "{}.radius".format(package): .5*u.arcmin,
@@ -51,14 +52,13 @@ class MeasurementTestCase(unittest.TestCase):
         metric1 = Metric("{}.radius".format(package), "some radius", u.arcsec)
         metric2 = Metric("{}.cmodel_mag".format(package), "a magnitude", u.mag)
         metric3 = Metric("{}.unitless".format(package), "no units!", '')
-        self.metric_set = MetricSet(package,
-                                    metric_list=[metric1, metric2, metric3])
+        self.metric_set = MetricSet([metric1, metric2, metric3])
 
     def test_create_radius(self):
         metric = 'test.radius'
         value = 1235 * u.arcmin
         measurement = Measurement(metric, value, metric_set=self.metric_set)
-        self.assertEqual(measurement.name, metric)
+        self.assertEqual(measurement.name, Name(metric))
         self.assertEqual(measurement.value, value)
         self.assertEqual(measurement.description, "some radius")
 
@@ -66,7 +66,7 @@ class MeasurementTestCase(unittest.TestCase):
         metric = 'test.cmodel_mag'
         value = 1235 * u.mag
         measurement = Measurement(metric, value, metric_set=self.metric_set)
-        self.assertEqual(measurement.name, metric)
+        self.assertEqual(measurement.name, Name(metric))
         self.assertEqual(measurement.value, value)
         self.assertEqual(measurement.description, "a magnitude")
 
