@@ -187,21 +187,56 @@ class Metric(JsonSerializationMixin):
         return m
 
     @classmethod
-    def from_json(cls, json_data):
+    def from_json(cls, json_data, resolve_dependencies=True):
         """Construct a Metric from a JSON dataset.
 
         Parameters
         ----------
         json_data : `dict`
             Metric JSON object.
+        resolve_dependencies : `bool`, optional
+            API users should always set this to `True`. The opposite is used
+            only used internally.
 
         Returns
         -------
         metric : `Metric`
             Metric from JSON.
         """
-        specs = [Specification.from_json(v)
-                 for v in json_data['specifications']]
+        specs = []
+        for spec_doc in json_data['specifications']:
+            deps = None
+            if 'dependencies' in spec_doc and resolve_dependencies:
+                deps = {}
+                for dep_item in spec_doc['dependencies']:
+                    if isinstance(dep_item, basestring):
+                            # This is a metric
+                            name = dep_item
+                            d = Metric.from_json(spec_doc['dependencies'][name],
+                                                 resolve_dependencies=False)
+                    elif isinstance(dep_item, dict):
+                        # Likely a Datum
+                        # in yaml, wrapper object is dict with single key-val
+                        name = list(dep_item.keys())[0]
+                        dep_item = dict(dep_item[name])
+                        v = dep_item['value']
+                        unit = dep_item['unit']
+                        d = Datum(v, unit,
+                                  label=dep_item.get('label', None),
+                                  description=dep_item.get('description', None))
+                    else:
+                        raise RuntimeError(
+                            'Cannot process dependency %r' % dep_item)
+                    deps[name] = d
+            # 'level' in the YAML file is the 'name' attribute
+            #   in the Specification object, and thus in the JSON serialization of it.
+            spec = Specification(name=spec_doc['name'],
+                                 quantity=spec_doc['value'],
+                                 unit=spec_doc['unit'],
+                                 filter_names=spec_doc.get('filter_names', None),
+                                 dependencies=deps)
+            specs.append(spec)
+
         params = {k: Datum.from_json(v)
                   for k, v in json_data['parameters'].items()}
         m = cls(json_data['name'],
