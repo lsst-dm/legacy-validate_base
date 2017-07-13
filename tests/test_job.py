@@ -11,8 +11,7 @@ import unittest
 
 import astropy.units as u
 
-from lsst.validate.base import (MeasurementBase, Metric, Datum, BlobBase,
-                                DeserializedMeasurement, Job)
+from lsst.validate.base import (MeasurementBase, Metric, Datum, BlobBase, Job)
 
 
 class DemoBlob(BlobBase):
