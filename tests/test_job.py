@@ -104,6 +104,9 @@ class JobTestCase(unittest.TestCase):
             self.assertEqual(m1.quantity, m2.quantity)
 
     def test_roundtrip(self):
+        # Manually use temporary directories here,
+        #  because I can't figure out how to get py.test tmpdir fixture
+        #  to work in the unittest.TestCase context.
         tmp_dir = tempfile.mkdtemp()
         out_file_name = os.path.join(tmp_dir, "job_test.json")
 
