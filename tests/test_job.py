@@ -3,12 +3,15 @@
 from __future__ import print_function
 from builtins import zip
 
+import json
+import os
+# I can't use the py.test tmpdir within the unittest framework.
+import tempfile
 import unittest
 
 import astropy.units as u
 
-from lsst.validate.base import (MeasurementBase, Metric, Datum, BlobBase,
-                                DeserializedMeasurement, Job)
+from lsst.validate.base import (MeasurementBase, Metric, Datum, BlobBase, Job)
 
 
 class DemoBlob(BlobBase):
@@ -98,3 +101,24 @@ class JobTestCase(unittest.TestCase):
         job2 = Job.from_json(job_json)
         for m1, m2 in zip(self.job.measurements, job2.measurements):
             self.assertEqual(m1.quantity, m2.quantity)
+
+    def test_roundtrip(self):
+        # Manually use temporary directories here,
+        #  because I can't figure out how to get py.test tmpdir fixture
+        #  to work in the unittest.TestCase context.
+        tmp_dir = tempfile.mkdtemp()
+        out_file_name = os.path.join(tmp_dir, "job_test.json")
+
+        # Write JSON
+        self.job.write_json(out_file_name)
+
+        # Rebuild from JSON
+        with open(out_file_name, 'r') as f:
+            job2 = Job.from_json(json.load(f))
+
+        for m1, m2 in zip(self.job.measurements, job2.measurements):
+            self.assertEqual(m1.quantity, m2.quantity)
+
+        # Cleanup our temp files
+        os.remove(out_file_name)
+        os.removedirs(tmp_dir)

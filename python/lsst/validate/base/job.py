@@ -181,7 +181,7 @@ class Job(JsonSerializationMixin):
         """Names of `Metric`\ s measured in this `Job` (`list`)."""
         metric_names = []
         for m in self._measurements:
-            if m.value is not None:
+            if m.quantity is not None:
                 if m.metric.name not in metric_names:
                     metric_names.append(m.metric.name)
         return metric_names
