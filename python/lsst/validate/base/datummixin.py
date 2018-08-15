@@ -1,6 +1,4 @@
 # See COPYRIGHT file at the top of the source tree.
-from builtins import object
-
 import astropy.units
 from .datum import Datum
 

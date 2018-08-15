@@ -1,5 +1,4 @@
 # See COPYRIGHT file at the top of the source tree.
-from future.utils import with_metaclass
 
 import abc
 import uuid
@@ -15,12 +14,9 @@ from .metric import Metric
 __all__ = ['MeasurementBase', 'DeserializedMeasurement']
 
 
-class MeasurementBase(with_metaclass(abc.ABCMeta,
-                                     type('NewBase',
-                                          (QuantityAttributeMixin,
-                                           JsonSerializationMixin,
-                                           DatumAttributeMixin),
-                                          {}))):
+class MeasurementBase(type('NewBase', (QuantityAttributeMixin, JsonSerializationMixin,
+                                       DatumAttributeMixin), {}),
+                      metaclass=abc.ABCMeta):
     """Base class for Measurement classes.
 
     This class isn't instantiated directly. Instead, developers should
