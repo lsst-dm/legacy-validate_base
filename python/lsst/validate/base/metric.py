@@ -1,5 +1,4 @@
 # See COPYRIGHT file at the top of the source tree.
-from __future__ import print_function, division
 from past.builtins import basestring
 
 import operator
