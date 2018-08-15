@@ -1,4 +1,7 @@
 # See COPYRIGHT file at the top of the source tree.
+
+__all__ = ['Metric', 'load_metrics']
+
 import operator
 from collections import OrderedDict
 import yaml
@@ -6,9 +9,6 @@ import yaml
 from .jsonmixin import JsonSerializationMixin
 from .datum import Datum
 from .spec import Specification
-
-
-__all__ = ['Metric', 'load_metrics']
 
 
 class Metric(JsonSerializationMixin):

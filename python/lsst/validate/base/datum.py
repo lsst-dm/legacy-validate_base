@@ -1,11 +1,11 @@
 # See COPYRIGHT file at the top of the source tree.
+
+__all__ = ['Datum', 'QuantityAttributeMixin']
+
 import numpy as np
 import astropy.units as u
 
 from .jsonmixin import JsonSerializationMixin
-
-
-__all__ = ['Datum', 'QuantityAttributeMixin']
 
 
 class QuantityAttributeMixin(object):

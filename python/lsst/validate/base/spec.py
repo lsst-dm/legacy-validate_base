@@ -1,12 +1,11 @@
 # See COPYRIGHT file at the top of the source tree.
 
+__all__ = ['Specification']
+
 import astropy.units as u
 
 from .jsonmixin import JsonSerializationMixin
 from .datum import Datum, QuantityAttributeMixin
-
-
-__all__ = ['Specification']
 
 
 class Specification(QuantityAttributeMixin, JsonSerializationMixin):

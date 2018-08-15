@@ -1,9 +1,9 @@
 # See COPYRIGHT file at the top of the source tree.
-import astropy.units
-from .datum import Datum
-
 
 __all__ = ['DatumAttributeMixin']
+
+import astropy.units
+from .datum import Datum
 
 
 class DatumAttributeMixin(object):

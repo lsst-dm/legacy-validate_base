@@ -1,5 +1,7 @@
 # See COPYRIGHT file at the top of the source tree.
 
+__all__ = ['MeasurementBase', 'DeserializedMeasurement']
+
 import abc
 import uuid
 
@@ -9,9 +11,6 @@ from .jsonmixin import JsonSerializationMixin
 from .blob import BlobBase, DeserializedBlob
 from .datum import Datum, QuantityAttributeMixin
 from .metric import Metric
-
-
-__all__ = ['MeasurementBase', 'DeserializedMeasurement']
 
 
 class MeasurementBase(type('NewBase', (QuantityAttributeMixin, JsonSerializationMixin,

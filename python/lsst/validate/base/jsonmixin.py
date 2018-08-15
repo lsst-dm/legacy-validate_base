@@ -1,10 +1,9 @@
 # See COPYRIGHT file at the top of the source tree.
 
+__all__ = ['JsonSerializationMixin']
+
 import abc
 import json
-
-
-__all__ = ['JsonSerializationMixin']
 
 
 class JsonSerializationMixin(metaclass=abc.ABCMeta):

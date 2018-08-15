@@ -1,14 +1,13 @@
 # See COPYRIGHT file at the top of the source tree.
 
+__all__ = ['BlobBase', 'DeserializedBlob']
+
 import abc
 import uuid
 
 from .jsonmixin import JsonSerializationMixin
 from .datummixin import DatumAttributeMixin
 from .datum import Datum
-
-
-__all__ = ['BlobBase', 'DeserializedBlob']
 
 
 class BlobBase(JsonSerializationMixin, DatumAttributeMixin):
