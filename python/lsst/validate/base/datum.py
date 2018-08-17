@@ -1,15 +1,11 @@
 # See COPYRIGHT file at the top of the source tree.
-from __future__ import print_function, division
-from builtins import object
-from past.builtins import basestring
+
+__all__ = ['Datum', 'QuantityAttributeMixin']
 
 import numpy as np
 import astropy.units as u
 
 from .jsonmixin import JsonSerializationMixin
-
-
-__all__ = ['Datum', 'QuantityAttributeMixin']
 
 
 class QuantityAttributeMixin(object):
@@ -31,7 +27,7 @@ class QuantityAttributeMixin(object):
     def _is_non_quantity_type(q):
         """Test if a quantity is a acceptable (`str`, `bool`, `int`, or
         `None`), but not `astropy.quantity`."""
-        return isinstance(q, basestring) or isinstance(q, bool) or \
+        return isinstance(q, str) or isinstance(q, bool) or \
             isinstance(q, int) or q is None
 
     @quantity.setter
@@ -183,7 +179,7 @@ class Datum(QuantityAttributeMixin, JsonSerializationMixin):
 
     @label.setter
     def label(self, value):
-        assert isinstance(value, basestring) or value is None
+        assert isinstance(value, str) or value is None
         self._label = value
 
     @property
@@ -193,5 +189,5 @@ class Datum(QuantityAttributeMixin, JsonSerializationMixin):
 
     @description.setter
     def description(self, value):
-        assert isinstance(value, basestring) or value is None
+        assert isinstance(value, str) or value is None
         self._description = value

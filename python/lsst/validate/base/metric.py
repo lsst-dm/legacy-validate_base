@@ -1,6 +1,6 @@
 # See COPYRIGHT file at the top of the source tree.
-from __future__ import print_function, division
-from past.builtins import basestring
+
+__all__ = ['Metric', 'load_metrics']
 
 import operator
 from collections import OrderedDict
@@ -9,9 +9,6 @@ import yaml
 from .jsonmixin import JsonSerializationMixin
 from .datum import Datum
 from .spec import Specification
-
-
-__all__ = ['Metric', 'load_metrics']
 
 
 class Metric(JsonSerializationMixin):
@@ -93,7 +90,7 @@ class Metric(JsonSerializationMixin):
         else:
             assert isinstance(parameters, dict)
             for key, value in parameters.items():
-                assert isinstance(key, basestring)
+                assert isinstance(key, str)
                 assert isinstance(value, Datum)
             self.parameters = parameters
 
@@ -158,7 +155,7 @@ class Metric(JsonSerializationMixin):
             if 'dependencies' in spec_doc and resolve_dependencies:
                 deps = {}
                 for dep_item in spec_doc['dependencies']:
-                    if isinstance(dep_item, basestring):
+                    if isinstance(dep_item, str):
                         # This is a metric
                         name = dep_item
                         d = Metric.from_yaml(name, yaml_doc=yaml_doc,
@@ -209,7 +206,7 @@ class Metric(JsonSerializationMixin):
             if 'dependencies' in spec_doc and resolve_dependencies:
                 deps = {}
                 for dep_item in spec_doc['dependencies']:
-                    if isinstance(dep_item, basestring):
+                    if isinstance(dep_item, str):
                             # This is a metric
                             name = dep_item
                             d = Metric.from_json(spec_doc['dependencies'][name],

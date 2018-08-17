@@ -1,12 +1,10 @@
 # See COPYRIGHT file at the top of the source tree.
-from __future__ import print_function, division
+
+__all__ = ['Job']
 
 from .jsonmixin import JsonSerializationMixin
 from .blob import BlobBase, DeserializedBlob
 from .measurement import MeasurementBase, DeserializedMeasurement
-
-
-__all__ = ['Job']
 
 
 class Job(JsonSerializationMixin):

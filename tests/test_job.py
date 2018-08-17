@@ -1,8 +1,4 @@
-#!/usr/bin/env python
 # See COPYRIGHT file at the top of the source tree.
-from __future__ import print_function
-from builtins import zip
-
 import json
 import os
 # I can't use the py.test tmpdir within the unittest framework.

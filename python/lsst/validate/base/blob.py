@@ -1,5 +1,6 @@
 # See COPYRIGHT file at the top of the source tree.
-from __future__ import print_function, division
+
+__all__ = ['BlobBase', 'DeserializedBlob']
 
 import abc
 import uuid
@@ -7,9 +8,6 @@ import uuid
 from .jsonmixin import JsonSerializationMixin
 from .datummixin import DatumAttributeMixin
 from .datum import Datum
-
-
-__all__ = ['BlobBase', 'DeserializedBlob']
 
 
 class BlobBase(JsonSerializationMixin, DatumAttributeMixin):
