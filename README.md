@@ -1,6 +1,8 @@
 # lsst.validate.base
 
-**Measurement framework for performance metrics.**
+**Deprecated measurement framework for performance metrics.**
+
+This package is deprecated; please refer to [lsst.verify](https://github.com/lsst/verify).
 
 Packages can use `lsst.validate.base` to report metric measurements to LSST Data Management's [SQUASH](https://squash.lsst.codes) dashboard.
 This package is part of the [LSST Science Pipelines](https://pipelines.lsst.io).
