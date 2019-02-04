@@ -207,10 +207,10 @@ class Metric(JsonSerializationMixin):
                 deps = {}
                 for dep_item in spec_doc['dependencies']:
                     if isinstance(dep_item, str):
-                            # This is a metric
-                            name = dep_item
-                            d = Metric.from_json(spec_doc['dependencies'][name],
-                                                 resolve_dependencies=False)
+                        # This is a metric
+                        name = dep_item
+                        d = Metric.from_json(spec_doc['dependencies'][name],
+                                             resolve_dependencies=False)
                     elif isinstance(dep_item, dict):
                         # Likely a Datum
                         # in yaml, wrapper object is dict with single key-val
